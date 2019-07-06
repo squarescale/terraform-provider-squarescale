@@ -31,6 +31,7 @@ func Provider() terraform.ResourceProvider {
 			"squarescale_project": resourceSquarescaleProject(),
 			"squarescale_env": resourceSquarescaleEnv(),
 			"squarescale_image": resourceSquarescaleImage(),
+			"squarescale_lb": resourceSquarescaleLb(),
 		},
 
 		ConfigureFunc: providerConfigure,
