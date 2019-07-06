@@ -29,6 +29,7 @@ func Provider() terraform.ResourceProvider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"squarescale_project": resourceSquarescaleProject(),
+			"squarescale_env": resourceSquarescaleEnv(),
 		},
 
 		ConfigureFunc: providerConfigure,
