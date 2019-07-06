@@ -90,22 +90,22 @@ func resourceSquarescaleEnvRead(d *schema.ResourceData, meta interface{}) error 
 
 func resourceSquarescaleEnvDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] Create config")
-	config := meta.(*Config)
-	project := d.Get("project").(string)
-	key := d.Get("key").(string)
+	// config := meta.(*Config)
+	// project := d.Get("project").(string)
+	// key := d.Get("key").(string)
 
 	d.Partial(true)
-	log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] Need to delete: %s", key)
-	env, err := squarescale.NewEnvironment(config.Client, project)
-	if err != nil {
-		return err
-	}
-	log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] Env: '%q' error: '%q'", env, err)
+	// log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] Need to delete: %s", key)
+	// env, err := squarescale.NewEnvironment(config.Client, project)
+	// if err != nil {
+	// 	return err
+	// }
+	// log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] Env: '%q' error: '%q'", env, err)
 
-	if err = env.Project.RemoveVariable(key); err != nil {
-		return err
-	}
-	env.CommitEnvironment(config.Client, project)
+	// if err = env.Project.RemoveVariable(key); err != nil {
+	// 	return err
+	// }
+	// env.CommitEnvironment(config.Client, project)
 
 	d.SetId("")
 	d.Partial(false)
