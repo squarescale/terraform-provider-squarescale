@@ -16,23 +16,18 @@ func resourceSquarescaleEnv() *schema.Resource {
 		Delete: resourceSquarescaleEnvDelete,
 
 		Schema: map[string]*schema.Schema{
-			"key": {
-				Type:        schema.TypeString,
-				Description: "key of the env",
-				Required:    true,
-				ForceNew:    true,
-			},
 			"project": {
 				Type:        schema.TypeString,
 				Description: "Project of the env",
 				Required:    true,
 				ForceNew:    true,
 			},
-			"value": {
-				Type:        schema.TypeString,
-				Description: "Value of the env",
+			"environnement": {
+				Type:        schema.TypeMap,
+				Description: "environnement dict",
 				Required:    true,
 				ForceNew:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 		},
 	}
@@ -43,20 +38,39 @@ func resourceSquarescaleEnvCreate(d *schema.ResourceData, meta interface{}) erro
 	config := meta.(*Config)
 
 	project := d.Get("project").(string)
-	key := d.Get("key").(string)
-	value := d.Get("value").(string)
 	d.Partial(true)
-
 	env, err := squarescale.NewEnvironment(config.Client, project)
 	if err != nil {
 		return err
 	}
-	log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvCreate] Add env variable '%s': '%s'", key, value)
-	env.Project.SetVariable(key, value)
-	env.CommitEnvironment(config.Client, project)
-	d.Set("key", key)
-	d.Set("value", value)
-	d.SetId(fmt.Sprintf("%s_%s", project, key))
+	log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvCreate] Current env: '%q'", env.Project)
+
+	if params, ok := d.GetOk("environnement"); ok {
+		log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvCreate] params: '%q'", params)
+		for key, _ := range params.(map[string]interface{}) {
+			currentValue, err := env.Project.GetVariable(key)
+			if err == nil && currentValue.Predefined {
+				log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvCreate] Can't redefine predefined keys (%s)", key)
+				return fmt.Errorf("Error Can't redefine predefined key: %s", key)
+			}
+		}
+		for key, value := range params.(map[string]interface{}) {
+			currentValue, err := env.Project.GetVariable(key)
+			log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvCreate] Current key (%s) has value: %s", key, currentValue.Value)
+			if err != nil {
+				log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvCreate] Add env variable '%s': '%s'", key, value)
+				env.Project.SetVariable(key, value.(string))
+			} else if value != currentValue.Value {
+				log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvCreate] '%s' != '%s'", currentValue.Value, value)
+				log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvCreate] Set env variable '%s' to '%s'", key, value)
+				env.Project.SetVariable(key, value.(string))
+			}
+		}
+		env.CommitEnvironment(config.Client, project)
+		d.Set("environnement", params)
+	}
+
+	d.SetId(fmt.Sprintf("%s", project))
 
 	d.Partial(false)
 
@@ -65,24 +79,8 @@ func resourceSquarescaleEnvCreate(d *schema.ResourceData, meta interface{}) erro
 
 func resourceSquarescaleEnvRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvRead] Create config")
-	config := meta.(*Config)
-	project := d.Get("project").(string)
-	key := d.Get("key").(string)
 
 	d.Partial(true)
-
-	env, err := squarescale.NewEnvironment(config.Client, project)
-	if err != nil {
-		return err
-	}
-	value, err := env.Project.GetVariable(key)
-	if err != nil {
-		return err
-	}
-	log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvRead] Value for key '%s': '%q'", key, value.Value)
-
-	d.Set("value", value.Value)
-
 	d.Partial(false)
 
 	return nil
@@ -91,23 +89,25 @@ func resourceSquarescaleEnvRead(d *schema.ResourceData, meta interface{}) error 
 func resourceSquarescaleEnvDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] Create config")
 	// config := meta.(*Config)
-	// project := d.Get("project").(string)
-	// key := d.Get("key").(string)
 
+	// project := d.Get("project").(string)
 	d.Partial(true)
-	// log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] Need to delete: %s", key)
 	// env, err := squarescale.NewEnvironment(config.Client, project)
 	// if err != nil {
 	// 	return err
 	// }
-	// log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] Env: '%q' error: '%q'", env, err)
+	// log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] Current env: '%q'", env.Project)
 
-	// if err = env.Project.RemoveVariable(key); err != nil {
-	// 	return err
+	// if params, ok := d.GetOk("environnement"); ok {
+	// 	log.Printf("[DEBUG][SQSC][resourceSquarescaleEnvDelete] params: '%q'", params)
+	// 	for key, _ := range params.(map[string]interface{}) {
+	// 		env.Project.RemoveVariable(key)
+	// 	}
+	// 	env.CommitEnvironment(config.Client, project)
 	// }
-	// env.CommitEnvironment(config.Client, project)
 
 	d.SetId("")
+
 	d.Partial(false)
 
 	return nil
